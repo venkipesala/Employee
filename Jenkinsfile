@@ -21,6 +21,11 @@ pipeline {
         }
 
         stage('Build & Push Image') {
+            environment {
+                AWS_ACCESS_KEY_ID     = credentials('ecs-access-key').accessKey
+                AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key').secretKey
+            }
+
             steps {
                 sh '''
                   mvn clean compile jib:build
