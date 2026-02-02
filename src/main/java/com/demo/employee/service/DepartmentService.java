@@ -76,7 +76,6 @@ public class DepartmentService {
     @Transactional
     public void assignEmployees(Long deptId,
                                 List<Long> empIds) {
-
         Department dept =
                 deptRepo.findById(deptId)
                         .orElseThrow();
@@ -87,7 +86,6 @@ public class DepartmentService {
         for (Employee e : emps) {
             e.setDepartment(dept);
         }
-
         empRepo.saveAll(emps);
     }
 

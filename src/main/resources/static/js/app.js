@@ -54,6 +54,12 @@ const projectEmployees = document.getElementById("projectEmployees");
 
       event.target.classList.add('active');
 
+      if (section === 'employee') {
+        loadEmployees(0);
+      }
+      if (section === 'department') {
+        loadDepartments(0);
+      }
       if (section === 'project') {
         loadProjectEmployees();
         loadProjects();
@@ -142,67 +148,54 @@ const projectEmployees = document.getElementById("projectEmployees");
 
 
   async function loadEmployees(page = 0) {
-
   empPage = page;
-
-  const search =
-  document.getElementById('empSearch').value || '';
-
+  const search = document.getElementById('empSearch').value || '';
   const key = encodeURIComponent(search);
+  showLoader();
+  try {
+      const data = await apiCall(
+        `${API.EMP}?page=${page}&size=${empSize}&search=${key}`
+      );
+      const list = data.content;
 
-  const data = await apiCall(
-    `${API.EMP}?page=${page}&size=${empSize}&search=${key}`
-  );
-
-
-  const list = data.content;
-
-  const tbody =
-  document.getElementById('employeeTable');
-
-  tbody.innerHTML = '';
-
-  if (!list || !list.length) {
-
-  tbody.innerHTML =
-    '<tr><td colspan="6">No Employees</td></tr>';
-
-  return;
-  }
-
-  list.forEach(e => {
-
-  tbody.innerHTML += `
-    <tr>
-      <td>${e.id}</td>
-      <td>${e.name}</td>
-      <td>${e.email}</td>
-      <td>${e.department?.name || 'N/A'}</td>
-      <td>${e.phone}</td>
-
-      <td>
-        <button class="btn-edit"
-          onclick='editEmployee(${JSON.stringify(e)})'>
-          Edit
-        </button>
-
-        <button class="btn-delete"
-          onclick='deleteEmployee(${e.id})'>
-          Delete
-        </button>
-      </td>
-    </tr>
-  `;
-  });
-
-  renderEmpPagination(data.totalPages);
-  }
-
+      const tbody =
+      document.getElementById('employeeTable');
+      tbody.innerHTML = '';
+      if (!list || !list.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="6">No Employees</td></tr>';
+      return;
+      }
+      list.forEach(e => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${e.id}</td>
+              <td>${e.name}</td>
+              <td>${e.email}</td>
+              <td>${e.department?.name || 'N/A'}</td>
+              <td>${e.phone}</td>
+              <td>
+                <button class="btn-edit"
+                  onclick='editEmployee(${JSON.stringify(e)})'>
+                  Edit
+                </button>
+                <button class="btn-delete"
+                  onclick='deleteEmployee(${e.id})'>
+                  Delete
+                </button>
+              </td>
+            </tr>
+      `   ;
+      });
+    renderEmpPagination(data.totalPages);
+    } finally {
+        hideLoader();
+    }
+}
 
   function searchEmployees() {
   loadEmployees(0);
   }
-
 
   function renderEmpPagination(totalPages) {
 
@@ -227,14 +220,10 @@ const projectEmployees = document.getElementById("projectEmployees");
   }
   }
 
-
-    /* ================= DEPARTMENT ================= */
-
   /* ================= DEPARTMENT ================= */
 
   let deptPage = 0;
   const deptSize = 5;
-
 
   async function loadDepartments(page = 0) {
   deptPage = page;
@@ -338,12 +327,9 @@ document.getElementById('deptForm')
 });
 
 
-
-
     /* ================= PROJECT ================= */
 
     async function loadProjectEmployees() {
-
       const emps = await apiCall(API.EMP);
 
       const select =
@@ -360,11 +346,8 @@ document.getElementById('deptForm')
       });
     }
 
-
     async function loadProjects() {
-
       const projects = await apiCall(API.PROJ);
-
       const tbody =
         document.getElementById('projectTable');
 
@@ -555,7 +538,10 @@ document.getElementById('deptForm')
 
     document.getElementById('assignSearch').value = '';
 
-    await loadAssignEmployees('');
+    //await loadAssignEmployees('');
+    // Do NOT auto load
+    document.getElementById('assignList').innerHTML =
+      '<i>Type at least 2 characters to search...</i>';
 
     document.getElementById('assignModal')
       .style.display = 'block';
@@ -571,39 +557,44 @@ document.getElementById('deptForm')
   /* ================= ASSIGN MODAL ================= */
 
   async function loadAssignEmployees(search) {
+    if (!assignDeptId) return;
+    if (!search || search.length < 2) return;
 
-  if (!assignDeptId) return;
+    const loader =  document.getElementById("assignLoader");
+    const div = document.getElementById('assignList');
+    loader.style.display = "block";
 
-  const data = await apiCall(
-  `/api/employees?search=${search}&page=0&size=20`
-  );
+    try {
+    const data = await apiCall(
+      `/api/employees?search=${search}&page=0&size=10`
+    );
+    const list = data.content;
 
-  const list = data.content;
+    div.innerHTML = '';
+    if (!list || list.length === 0) {
+      div.innerHTML = '<i>No employees found</i>';
+      return;
+    }
+    list.forEach(e => {
+      const checked =
+        e.department?.id === assignDeptId
+          ? 'checked' : '';
 
-  const div =
-  document.getElementById('assignList');
-
-  div.innerHTML = '';
-
-  list.forEach(e => {
-
-  const checked =
-    e.department?.id === assignDeptId
-      ? 'checked' : '';
-
-  div.innerHTML += `
-    <label>
-      <input type="checkbox"
-             value="${e.id}"
-             ${checked}>
-      ${e.name} (${e.email})
-    </label><br>
-  `;
-  });
+      div.innerHTML += `
+        <label>
+          <input type="checkbox"
+                 value="${e.id}"
+                 ${checked}>
+          ${e.name} (${e.email})
+        </label><br>
+      `;
+    });
+   } finally {
+      loader.style.display = "none";
+   }
   }
 
   /* Save assignment */
-
   async function saveAssign() {
     if (!assignDeptId) return;
 
@@ -643,14 +634,78 @@ window.addEventListener("load", () => {
       loadDeptEmployees(q);
     });
   }
-
   // Assign modal search
   const assignSearch =
     document.getElementById("assignSearch");
 
-  if (assignSearch) {
-    assignSearch.addEventListener("input", e => {
-      loadAssignEmployees(e.target.value);
+  assignSearch.addEventListener("input", e => {
+    const q = e.target.value.trim();
+    if (q.length < 2) {
+      document.getElementById('assignList').innerHTML =
+        '<i>Type at least 2 characters...</i>';
+      return;
+    }
+    loadAssignEmployees(q);
+  });
+});
+
+function showLoader() {
+  document.getElementById("loader").classList.remove("hidden");
+}
+
+function hideLoader() {
+  document.getElementById("loader").classList.add("hidden");
+}
+
+// ================= ENTER KEY SEARCH =================
+
+window.addEventListener("load", () => {
+  const empSearch =
+    document.getElementById("empSearch");
+
+  if (empSearch) {
+    empSearch.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault(); // stop form submit
+        searchEmployees(); // trigger search
+      }
     });
   }
+});
+
+// ================= GOOGLE-STYLE AUTO SEARCH =================
+
+let empSearchTimer = null;
+window.addEventListener("load", () => {
+  const empSearch =
+    document.getElementById("empSearch");
+
+  if (!empSearch) return;
+  empSearch.addEventListener("input", e => {
+    // Clear old timer if user keeps typing
+    if (empSearchTimer) {
+      clearTimeout(empSearchTimer);
+    }
+    // Wait 500ms after typing stops
+    empSearchTimer = setTimeout(() => {
+      loadEmployees(0); // trigger search
+    }, 2500);
+  });
+});
+
+// ================= ASSIGN POPUP AUTO SEARCH =================
+let assignSearchTimer = null;
+window.addEventListener("load", () => {
+  const assignSearch =
+    document.getElementById("assignSearch");
+
+  if (!assignSearch) return;
+  assignSearch.addEventListener("input", e => {
+    if (assignSearchTimer) {
+      clearTimeout(assignSearchTimer);
+    }
+    assignSearchTimer = setTimeout(() => {
+      loadAssignEmployees(e.target.value);
+    }, 2500);
+  });
 });
