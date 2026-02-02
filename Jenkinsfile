@@ -5,6 +5,12 @@ pipeline {
         jdk 'JDK21'
     }
 
+    environment {
+        AWS_REGION = 'ap-south-1'
+        CLUSTER = 'ecs-cluster'
+        SERVICE = 'employee-task-service-pio1exln'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -14,32 +20,34 @@ pipeline {
             }
         }
 
-        stage('Build Backend') {
+        stage('Build & Push Image') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                sh '''
+                  mvn clean compile jib:build
+                '''
             }
         }
 
-        stage('Build UI') {
+        stage('Deploy to ECS') {
             steps {
-                sh 'echo "UI build later"'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh 'echo "Docker/Jib later"'
+                sh '''
+                  aws ecs update-service \
+                    --cluster $CLUSTER \
+                    --service $SERVICE \
+                    --force-new-deployment \
+                    --region $AWS_REGION
+                '''
             }
         }
     }
 
     post {
         success {
-            echo 'Build Successful!'
+            echo 'Deployed Successfully to ECS 🚀'
         }
 
         failure {
-            echo 'Build Failed!'
+            echo 'Deployment Failed ❌'
         }
     }
 }
