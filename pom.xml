@@ -106,7 +106,7 @@
 					</from>
 					<to>
 						<image>315974965922.dkr.ecr.ap-south-1.amazonaws.com/employee-app</image>
-						<credHelper>ecr-login</credHelper>
+						<!--credHelper>ecr-login</credHelper-->
 					</to>
 				</configuration>
 			</plugin>
