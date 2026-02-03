@@ -330,6 +330,7 @@ document.getElementById('deptForm')
     /* ================= PROJECT ================= */
 
     async function loadProjectEmployees() {
+      aler('In Progress');
       const emps = await apiCall(API.EMP);
 
       const select =
