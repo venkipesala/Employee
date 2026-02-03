@@ -7,8 +7,8 @@ pipeline {
 
     environment {
         AWS_REGION = 'ap-south-1'
-        CLUSTER = 'ecs-cluster'
-        SERVICE = 'employee-task-service-pio1exln'
+        CLUSTER    = 'ecs-cluster'
+        SERVICE    = 'employee-task-service-pio1exln'
     }
 
     stages {
@@ -20,14 +20,11 @@ pipeline {
             }
         }
 
-        stage('Build & Push Image') {
-            environment {
-                AWS_ACCESS_KEY_ID     = credentials('ecs-access-key').accessKey
-                AWS_SECRET_ACCESS_KEY = credentials('aws-secret-key').secretKey
-            }
-
+        stage('Build & Push Image (Jib → ECR)') {
             steps {
                 sh '''
+                  echo "Building & Pushing Image to ECR..."
+
                   mvn clean compile jib:build
                 '''
             }
@@ -36,6 +33,8 @@ pipeline {
         stage('Deploy to ECS') {
             steps {
                 sh '''
+                  echo "Deploying to ECS..."
+
                   aws ecs update-service \
                     --cluster $CLUSTER \
                     --service $SERVICE \
@@ -48,11 +47,11 @@ pipeline {
 
     post {
         success {
-            echo 'Deployed Successfully to ECS 🚀'
+            echo '✅ Deployed Successfully to ECS 🚀'
         }
 
         failure {
-            echo 'Deployment Failed ❌'
+            echo '❌ Deployment Failed'
         }
     }
 }
