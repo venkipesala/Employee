@@ -41,7 +41,7 @@ pipeline {
             }
         }
 
-        stage('Create New Task Definition') {
+         stage('Register New Task Definition') {
             steps {
                 sh '''
                   echo "Downloading current task definition..."
@@ -52,42 +52,55 @@ pipeline {
                     > task-def.json
 
 
-                  echo "Replacing image tag..."
+                  echo "Updating image..."
 
-                  cat task-def.json \
-                  | jq '.taskDefinition
+                  cat task-def.json | jq '
+                    .taskDefinition
                     | del(
-                      .taskDefinitionArn,
-                      .revision,
-                      .status,
-                      .requiresAttributes,
-                      .compatibilities,
-                      .registeredAt,
-                      .registeredBy
-                    )
+                        .taskDefinitionArn,
+                        .revision,
+                        .status,
+                        .requiresAttributes,
+                        .compatibilities,
+                        .registeredAt,
+                        .registeredBy
+                      )
                     | .containerDefinitions[0].image =
                       "'$ECR_REPO:$IMAGE_TAG'"
-                    ' \
-                  > new-task-def.json
+                  ' > new-task-def.json
 
 
-                  echo "Registering new task definition..."
+                  echo "Registering new revision..."
 
                   aws ecs register-task-definition \
                     --cli-input-json file://new-task-def.json \
-                    --region $AWS_REGION
+                    --region $AWS_REGION \
+                    > register-output.json
+
+
+                  echo "Getting new revision..."
+
+                  REVISION=$(cat register-output.json | jq '.taskDefinition.revision')
+
+                  echo "New Revision: $REVISION"
+
+                  echo $REVISION > revision.txt
                 '''
             }
         }
 
+
         stage('Deploy to ECS') {
             steps {
                 sh '''
-                  echo "Deploying to ECS..."
+                  REVISION=$(cat revision.txt)
+
+                  echo "Deploying revision: $TASK_FAMILY:$REVISION"
 
                   aws ecs update-service \
                     --cluster $CLUSTER \
                     --service $SERVICE \
+                    --task-definition $TASK_FAMILY:$REVISION \
                     --force-new-deployment \
                     --region $AWS_REGION
                 '''
