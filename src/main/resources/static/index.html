@@ -22,11 +22,6 @@
 <div class="container" id="employee-section">
     <h2>Employee Management</h2>
 
-    <div style="margin-bottom:10px;">
-        <!--button onclick="showAllEmployees()">Show All Employees</button-->
-        <!--button onclick="clearEmployeeTable()">Clear Table</button-->
-    </div>
-
     <form id="employeeForm">
         <input type="hidden" id="empId">
 
@@ -35,9 +30,10 @@
         <!--input type="text" id="empDept" placeholder="Department" required-->
         <select id="empDept"></select>
         <input type="text" id="empPhone" placeholder="Phone" required>
-
-        <button type="submit">Add/Save Employee</button>
-        <button type="button" class="btn-clear" onclick="clearEmployeeForm()">Clear</button>
+        <div class="form-actions">
+            <button type="submit">Add/Update Employee</button>
+            <button type="button" class="btn-clear" onclick="clearEmployeeForm()">Clear</button>
+        </div>
     </form>
 
     <div class="search-bar">
@@ -67,6 +63,7 @@
             <th>Name</th>
             <th>Email</th>
             <th>Department</th>
+            <th>Projects</th>
             <th>Phone</th>
             <th>Actions</th>
         </tr>
@@ -107,15 +104,13 @@
         </thead>
         <tbody id="deptTable"></tbody>
     </table>
+    <div id="deptEmpResults"></div>
 
 </div>
 
 <!-- ================= ASSIGN MODAL ================= -->
-
 <div id="assignModal" class="modal">
-
     <div class="modal-content">
-
         <h3 id="assignTitle"></h3>
 
         <input type="text"
@@ -126,10 +121,9 @@
             ⏳ Loading...
         </div>
 
-        <div id="assignList"></div>
+        <div id="assignList" class="assign-list"></div>
 
         <div style="margin-top:10px;text-align:right">
-
             <button onclick="saveAssign()">
                 Save
             </button>
@@ -137,7 +131,6 @@
             <button onclick="closeAssign()">
                 Cancel
             </button>
-
         </div>
 
     </div>
@@ -146,15 +139,9 @@
 <!-- ================= PROJECT SECTION ================= -->
 
 <div class="container hidden" id="project-section">
-
     <h2>Project Management</h2>
 
-    <div style="margin-bottom:10px;">
-        <button onclick="loadProjects()">Show All Projects</button>
-    </div>
-
     <form id="projectForm">
-
         <input type="hidden" id="projectId">
 
         <input type="text"
@@ -164,7 +151,11 @@
 
         <select id="projectStatus">
             <option value="NEW">NEW</option>
+            <option value="NOT_STARTED">NOT_STARTED</option>
             <option value="IN_PROGRESS">IN_PROGRESS</option>
+            <option value="ON_HOLD">ON_HOLD</option>
+            <option value="AT_RISK">AT_RISK</option>
+            <option value="CANCELLED">CANCELLED</option>
             <option value="COMPLETED">COMPLETED</option>
         </select>
 
@@ -172,20 +163,31 @@
 
         <input type="date" id="projectEnd">
 
-        <!-- Assign Employees -->
-        <select id="projectEmployees" multiple>
-            <!-- Loaded dynamically -->
-        </select>
-
-        <button type="submit">Save Project</button>
-
-        <button type="button"
-                class="btn-clear"
-                onclick="clearProjectForm()">
-            Clear
-        </button>
-
+        <div class="form-actions">
+            <button type="submit">Add/Update Project</button>
+            <button type="button"
+                    class="btn-clear"
+                    onclick="clearProjectForm()">
+                Clear
+            </button>
+        </div>
     </form>
+
+    <div class="search-bar">
+        <input type="text"
+               id="projectSearch"
+               placeholder="Search by name or status...">
+
+        <button onclick="searchProjects()">🔍 Search</button>
+
+        <button onclick="resetProjectSearch()">🔄 Reset</button>
+    </div>
+
+    <div id="projectPagination"></div>
+
+    <div id="projectInfo" class="project-info">
+        <span id="assignedCount"></span>
+    </div>
 
     <table>
         <thead>

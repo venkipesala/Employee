@@ -1,14 +1,15 @@
 package com.demo.employee.entity;
 
+import com.demo.employee.entity.Employee;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Table(name = "projects")
-@JsonIgnoreProperties({"employees"})
 public class Project {
 
     @Id
@@ -26,7 +27,10 @@ public class Project {
             joinColumns = @JoinColumn(name="project_id"),
             inverseJoinColumns = @JoinColumn(name="employee_id")
     )
-    private List<Employee> employees;
+    private List<Employee> employees = new ArrayList<>();;
+
+    public Project() {
+    }
 
     public Long getId() {
         return id;

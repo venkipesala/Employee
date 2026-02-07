@@ -3,6 +3,7 @@ package com.demo.employee.entity;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -16,12 +17,12 @@ public class Employee {
     private String name;
     private String email;
     private String phone;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;
 
-    @ManyToMany(mappedBy = "employees")
-    private List<Project> projects;
+    @ManyToMany(mappedBy = "employees", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    private List<Project> projects = new ArrayList<>();;
 
     public Employee() {}
 
@@ -83,4 +84,18 @@ public class Employee {
     public void setProjects(List<Project> projects) {
         this.projects = projects;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Employee)) return false;
+        Employee e = (Employee) o;
+        return id != null && id.equals(e.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+
 }

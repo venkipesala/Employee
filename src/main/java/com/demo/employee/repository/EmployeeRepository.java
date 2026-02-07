@@ -24,18 +24,17 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
         """)
         Page<Employee> findAllWithDetails(Pageable p);
 
+        // For detail view (with projects)
         @Query("""
-           SELECT e FROM Employee e
-           WHERE LOWER(e.name) LIKE %:key%
-              OR LOWER(e.email) LIKE %:key%
+        SELECT DISTINCT e FROM Employee e
+        LEFT JOIN FETCH e.department
+        LEFT JOIN FETCH e.projects
+        WHERE e.id = :id
         """)
-        Page<Employee> search(@Param("key") String key,
-                              Pageable pageable);
-
+        Employee findByIdWithDetails(@Param("id") Long id);
 
         @Query("""
         SELECT e FROM Employee e
-        LEFT JOIN e.department d
         WHERE LOWER(e.name) LIKE LOWER(CONCAT('%', :search, '%'))
            OR LOWER(e.email) LIKE LOWER(CONCAT('%', :search, '%'))
         """)

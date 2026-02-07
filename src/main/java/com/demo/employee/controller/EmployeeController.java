@@ -61,4 +61,9 @@ public class EmployeeController {
         return service.search(search, pageable);
     }
 
+    @GetMapping("/health")
+    public String health() {
+        return "OK - CI/CD Working";
+    }
+
 }

@@ -234,4 +234,103 @@
       font-weight: bold;
     }
 
+    .assign-list {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 8px;
+      margin-top: 8px;
+      background: #fafafa;
+    }
 
+    .assign-item {
+      padding: 4px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .assign-item:hover {
+      background: #f0f7ff;
+    }
+
+    /* Right align form buttons */
+    .form-actions {
+      grid-column: 1 / -1;    /* <--- THIS IS THE KEY FIX */
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      width: 100%;
+    }
+
+#assignList {
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 8px;
+  margin-top: 10px;
+}
+
+.assign-item {
+  padding: 6px;
+  border-bottom: 1px solid #eee;
+}
+
+.assign-item:hover {
+  background: #f5f7fa;
+}
+
+.assigned-info {
+  margin: 5px 0;
+  font-size: 13px;
+  color: #555;
+}
+
+.project-info {
+  margin-top: 8px;
+  text-align: right;
+  font-size: 13px;
+  color: #555;
+}
+
+#projectPagination,
+#empPagination,
+#deptPagination {
+  margin-top: 10px;
+  text-align: center;
+}
+
+#projectPagination button,
+#empPagination button,
+#deptPagination button {
+  margin: 3px;
+  padding: 5px 10px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+#projectPagination button:hover,
+#empPagination button:hover,
+#deptPagination button:hover {
+  background: #2563eb;
+  color: white;
+}
+
+.active-page {
+  background: #2563eb !important;
+  color: white !important;
+  border-color: #2563eb !important;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 13px;
+  margin-left: 6px;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}

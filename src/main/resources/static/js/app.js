@@ -23,10 +23,8 @@ const projectName = document.getElementById("projectName");
 const projectStatus = document.getElementById("projectStatus");
 const projectStart = document.getElementById("projectStart");
 const projectEnd = document.getElementById("projectEnd");
-const projectEmployees = document.getElementById("projectEmployees");
 
 /* ================= API CONFIG ================= */
-
     const API = {
       EMP: '/api/employees',
       DEPT: '/api/departments',
@@ -35,42 +33,54 @@ const projectEmployees = document.getElementById("projectEmployees");
 
     let assignDeptId = null;
     let currentDeptId = null;
+    let assignProjectId = null;
+
+    let currentAssignedEmpIds = [];
 
     /* ================= NAVIGATION ================= */
-
     function showSection(section, event) {
-
+      // Hide all sections
       document
         .querySelectorAll('.container')
         .forEach(div => div.classList.add('hidden'));
 
+      // Show selected section
       document
         .getElementById(section + '-section')
         .classList.remove('hidden');
 
+      // Update active button
       document
         .querySelectorAll('nav button')
         .forEach(btn => btn.classList.remove('active'));
 
       event.target.classList.add('active');
 
+      /* 🔥 RESET SEARCH + LOAD FRESH DATA */
       if (section === 'employee') {
+        // Clear employee search
+        const empSearch = document.getElementById('empSearch');
+        if (empSearch) empSearch.value = '';
+
         loadEmployees(0);
       }
+
       if (section === 'department') {
         loadDepartments(0);
       }
+
       if (section === 'project') {
-        loadProjectEmployees();
-        loadProjects();
+        // Clear project search
+        const projSearch = document.getElementById('projectSearch');
+        if (projSearch) projSearch.value = '';
+
+        loadProjects(0);
       }
     }
 
 
     /* ================= COMMON API ================= */
-
     async function apiCall(url, method = 'GET', data = null) {
-
       const options = {
         method,
         headers: {
@@ -146,7 +156,6 @@ const projectEmployees = document.getElementById("projectEmployees");
   document.getElementById('employeeForm').reset();
   }
 
-
   async function loadEmployees(page = 0) {
   empPage = page;
   const search = document.getElementById('empSearch').value || '';
@@ -173,6 +182,9 @@ const projectEmployees = document.getElementById("projectEmployees");
               <td>${e.name}</td>
               <td>${e.email}</td>
               <td>${e.department?.name || 'N/A'}</td>
+              <td>
+                ${e.projects?.map(p => p.name).join(', ') || ''}
+              </td>
               <td>${e.phone}</td>
               <td>
                 <button class="btn-edit"
@@ -194,34 +206,29 @@ const projectEmployees = document.getElementById("projectEmployees");
 }
 
   function searchEmployees() {
-  loadEmployees(0);
+    loadEmployees(0);
   }
 
   function renderEmpPagination(totalPages) {
+      const div =
+      document.getElementById('empPagination');
 
-  const div =
-  document.getElementById('empPagination');
+      div.innerHTML = '';
 
-  div.innerHTML = '';
+      for (let i = 0; i < totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.textContent = i + 1;
 
-  for (let i = 0; i < totalPages; i++) {
+          if (i === empPage) {
+            btn.classList.add('active-page');
+          }
 
-  const btn = document.createElement('button');
-
-  btn.textContent = i + 1;
-
-  if (i === empPage) {
-    btn.classList.add('active-page');
-  }
-
-  btn.onclick = () => loadEmployees(i);
-
-  div.appendChild(btn);
-  }
+          btn.onclick = () => loadEmployees(i);
+          div.appendChild(btn);
+      }
   }
 
   /* ================= DEPARTMENT ================= */
-
   let deptPage = 0;
   const deptSize = 5;
 
@@ -328,52 +335,61 @@ document.getElementById('deptForm')
 
 
     /* ================= PROJECT ================= */
+    let projectPage = 0;
+    const projectSize = 5;
 
-    async function loadProjectEmployees() {
-      alert('In Progress');
-      const emps = await apiCall(API.EMP);
+    async function loadProjects(page = 0) {
 
-      const select =
-        document.getElementById('projectEmployees');
+      projectPage = page;
 
-      select.innerHTML = '';
+      const search =
+        document.getElementById("projectSearch")?.value || '';
 
-      emps.content.forEach(e => {
+      const key = encodeURIComponent(search);
 
-        select.innerHTML +=
-          `<option value="${e.id}">
-            ${e.name}
-          </option>`;
-      });
-    }
+      const data = await apiCall(
+        `${API.PROJ}?page=${page}&size=${projectSize}&search=${key}`
+      );
 
-    async function loadProjects() {
-      const projects = await apiCall(API.PROJ);
+      const list = data.content;
+
       const tbody =
         document.getElementById('projectTable');
 
       tbody.innerHTML = '';
 
-      if (!projects || !projects.length) {
-
+      if (!list || !list.length) {
         tbody.innerHTML =
-          '<tr><td colspan="5">No Data</td></tr>';
-
+          '<tr><td colspan="5">No Projects</td></tr>';
         return;
       }
 
-      projects.forEach(p => {
-
-        const empNames =
-          p.employees?.map(e => e.name).join(', ') || '';
+      list.forEach(p => {
 
         tbody.innerHTML += `
-          <tr>
+          <tr id="project-row-${p.id}">
             <td>${p.id}</td>
             <td>${p.name}</td>
             <td>${p.status}</td>
-            <td>${empNames}</td>
             <td>
+              👥 ${p.employees?.length || 0} Assigned
+              <button class="btn-link"
+                onclick="openProjectAssign(${p.id}, '${p.name}')">
+                View
+              </button>
+            </td>
+
+            <td>
+              <button class="btn-edit"
+                onclick='editProject(${JSON.stringify(p)})'>
+                Edit
+              </button>
+
+              <button class="btn-assignemp"
+                onclick="openProjectAssign(${p.id}, '${p.name}')">
+                Assign Employees
+              </button>
+
               <button class="btn-delete"
                 onclick="deleteProject(${p.id})">
                 Delete
@@ -382,24 +398,55 @@ document.getElementById('deptForm')
           </tr>
         `;
       });
+
+      renderProjectPagination(data.totalPages);
     }
 
+  async function openProjectAssign(id, name){
+      assignProjectId = id;
+      assignDeptId = null; // disable dept mode
+
+      const proj = await apiCall(`${API.PROJ}/${id}`);
+
+      currentAssignedEmpIds =
+          proj.employees?.map(e => e.id) || [];
+
+      document.getElementById('assignTitle')
+          .innerText =
+            `Assign Employees to Project: ${name}`;
+
+      document.getElementById('assignModal').style.display = 'block';
+
+      // 🔥 Auto-load existing employees
+      if (currentAssignedEmpIds.length > 0) {
+        loadAssignEmployeesByIds(currentAssignedEmpIds);
+      } else {
+        document.getElementById('assignList').innerHTML =
+          "<i>No employees assigned yet. Search to add.</i>";
+      }
+
+      document.getElementById("assignedCount").innerText =
+        `Assigned Employees: ${currentAssignedEmpIds.length}`;
+    }
 
     document.getElementById('projectForm')
       .addEventListener('submit', async e => {
 
         e.preventDefault();
 
-        const empIds =
-          [...projectEmployees.selectedOptions]
-            .map(o => o.value);
+        if (projectStart.value &&
+            projectEnd.value &&
+            projectStart.value > projectEnd.value) {
+
+          alert("End date must be after start date");
+          return;
+        }
 
         const project = {
           name: projectName.value,
           status: projectStatus.value,
           startDate: projectStart.value,
           endDate: projectEnd.value,
-          employeeIds: empIds
         };
 
         const id = projectId.value;
@@ -414,9 +461,25 @@ document.getElementById('deptForm')
         loadProjects();
       });
 
+    function editProject(p) {
+      projectId.value = p.id;
+      projectName.value = p.name;
+      projectStatus.value = p.status;
+      projectStart.value = p.startDate || '';
+      projectEnd.value = p.endDate || '';
+
+      // Select assigned employees
+      [...projectEmployees.options].forEach(o => {
+        o.selected =
+          p.employees?.some(e => e.id == o.value);
+      });
+
+      // Scroll to form (UX improvement)
+      document.getElementById("projectForm")
+        .scrollIntoView({ behavior: "smooth" });
+    }
 
     async function deleteProject(id) {
-
       if (!confirm('Delete project?')) return;
 
       await apiCall(`${API.PROJ}/${id}`, 'DELETE');
@@ -424,51 +487,46 @@ document.getElementById('deptForm')
       loadProjects();
     }
 
-
     function clearProjectForm() {
-
       projectId.value = '';
       document.getElementById('projectForm').reset();
     }
 
   async function loadDeptDropdown() {
+      const data = await apiCall(`${API.DEPT}?page=0&size=100`);
 
-  const data = await apiCall(`${API.DEPT}?page=0&size=100`);
+      const depts = data.content;
 
-  const depts = data.content;
+      const select =
+      document.getElementById('empDept');
 
-  const select =
-  document.getElementById('empDept');
+      select.innerHTML =
+      '<option value="">Select</option>';
 
-  select.innerHTML =
-  '<option value="">Select</option>';
+      if (!depts) return;
 
-  if (!depts) return;
+      depts.forEach(d => {
 
-  depts.forEach(d => {
-
-  select.innerHTML +=
-    `<option value="${d.id}">
-      ${d.name}
-    </option>`;
-  });
+      select.innerHTML +=
+        `<option value="${d.id}">
+          ${d.name}
+        </option>`;
+      });
   }
 
   function clearDeptTable() {
-  document.getElementById('deptTable').innerHTML = '';
+    document.getElementById('deptTable').innerHTML = '';
   }
 
   function showAllEmployees() {
+      // Clear search box
+      document.getElementById('empSearch').value = '';
 
-  // Clear search box
-  document.getElementById('empSearch').value = '';
-
-  // Reload first page
-  loadEmployees(0);
+      // Reload first page
+      loadEmployees(0);
   }
 
   async function loadDeptEmployees(search) {
-
     if (!currentDeptId) return;
 
     const data = await apiCall(
@@ -522,30 +580,32 @@ document.getElementById('deptForm')
   }
 
   function clearDeptForm() {
+      deptId.value = '';
+      document.getElementById('deptForm').reset();
 
-  deptId.value = '';
-  document.getElementById('deptForm').reset();
+      currentDeptId = null;
 
-  currentDeptId = null;
-
-  document.getElementById('deptEmpResults').innerHTML = '';
+      document.getElementById('deptEmpResults').innerHTML = '';
   }
 
   async function openAssign(id, name) {
     assignDeptId = id;
+    assignProjectId = null;
+
+    // Load dept employees first
+    const dept = await apiCall(`${API.DEPT}/${id}`);
+
+    currentAssignedEmpIds =
+       dept.employees?.map(e => e.id) || [];
 
     document.getElementById('assignTitle')
       .innerText = `Assign Employees to ${name}`;
 
-    document.getElementById('assignSearch').value = '';
-
-    //await loadAssignEmployees('');
-    // Do NOT auto load
     document.getElementById('assignList').innerHTML =
-      '<i>Type at least 2 characters to search...</i>';
+        "<i>Type at least 3 characters to search...</i>";
 
     document.getElementById('assignModal')
-      .style.display = 'block';
+    .style.display = 'block';
   }
 
   function closeAssign() {
@@ -553,73 +613,143 @@ document.getElementById('deptForm')
       .style.display = 'none';
 
     assignDeptId = null;
+    assignProjectId = null;
+
+    currentAssignedEmpIds = [];
+
+    document.getElementById('assignList').innerHTML = '';
+    document.getElementById('assignSearch').value = '';
+
+    if (assignSearchTimer) {
+      clearTimeout(assignSearchTimer);
+      assignSearchTimer = null;
+    }
   }
 
+
   /* ================= ASSIGN MODAL ================= */
-
   async function loadAssignEmployees(search) {
-    if (!assignDeptId) return;
-    if (!search || search.length < 2) return;
+    if (!assignDeptId && !assignProjectId) return;
+    if (!search || search.length < 1) return;
 
-    const loader =  document.getElementById("assignLoader");
+    const loader = document.getElementById("assignLoader");
     const div = document.getElementById('assignList');
+
     loader.style.display = "block";
 
     try {
-    const data = await apiCall(
-      `/api/employees?search=${search}&page=0&size=10`
-    );
-    const list = data.content;
+      const data = await apiCall(
+        `/api/employees?search=${search}&page=0&size=20`
+      );
 
-    div.innerHTML = '';
-    if (!list || list.length === 0) {
-      div.innerHTML = '<i>No employees found</i>';
-      return;
-    }
-    list.forEach(e => {
-      const checked =
-        e.department?.id === assignDeptId
-          ? 'checked' : '';
+      const list = data.content;
 
-      div.innerHTML += `
-        <label>
-          <input type="checkbox"
-                 value="${e.id}"
-                 ${checked}>
-          ${e.name} (${e.email})
-        </label><br>
-      `;
-    });
-   } finally {
+      div.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        div.innerHTML = '<i>No employees found</i>';
+        return;
+      }
+
+      list.forEach(e => {
+
+        const checked =
+          currentAssignedEmpIds.includes(e.id)
+            ? 'checked'
+            : '';
+
+        div.innerHTML += `
+          <div class="assign-item">
+            <label>
+              <input type="checkbox"
+                     value="${e.id}"
+                     ${checked}
+                     onchange="toggleAssign(${e.id}, this.checked)">
+              <b>${e.name}</b>
+              <span>(${e.email})</span>
+            </label>
+          </div>
+        `;
+      });
+
+    } finally {
       loader.style.display = "none";
-   }
+    }
   }
+
+function toggleAssign(empId, checked) {
+
+  empId = Number(empId);
+
+  if (checked) {
+    // Add
+    if (!currentAssignedEmpIds.includes(empId)) {
+      currentAssignedEmpIds.push(empId);
+    }
+  } else {
+    // Remove
+    currentAssignedEmpIds =
+      currentAssignedEmpIds.filter(id => id !== empId);
+  }
+
+document.getElementById("assignedCount").innerText =
+  `Assigned: ${currentAssignedEmpIds.length}`;
+
+
+  console.log("Current Assigned:", currentAssignedEmpIds);
+}
+
 
   /* Save assignment */
   async function saveAssign() {
-    if (!assignDeptId) return;
 
-    const ids =
-    [...document.querySelectorAll(
-      '#assignList input:checked'
-    )]
-    .map(i => i.value);
+    if (!currentAssignedEmpIds.length) {
+      alert("Select at least one employee");
+      return;
+    }
 
-    await apiCall(
-    `/api/departments/${assignDeptId}/employees`,
-    'PUT',
-    ids
-    );
+    // PROJECT MODE
+    if (assignProjectId) {
 
-    alert('Employees Assigned');
+      await apiCall(
+        `/api/projects/${assignProjectId}/employees`,
+        'PUT',
+        currentAssignedEmpIds
+      );
 
-    closeAssign();
+    document.getElementById("assignedCount").innerText =
+    `Assigned Employees: ${currentAssignedEmpIds.length}`;
 
-    loadDepartments(deptPage);
+      alert("Employees updated for Project");
+
+      closeAssign();
+      loadProjects(projectPage);
+
+      return;
+    }
+
+    // DEPARTMENT MODE
+    if (assignDeptId) {
+
+      await apiCall(
+        `/api/departments/${assignDeptId}/employees`,
+        'PUT',
+        currentAssignedEmpIds
+      );
+
+      alert("Employees updated for Department");
+
+      closeAssign();
+      loadDepartments(deptPage);
+
+      return;
+    }
+
+    alert("No target selected");
   }
 
-  // ================= SAFE EVENT BINDING =================
 
+  // ================= SAFE EVENT BINDING =================
 window.addEventListener("load", () => {
   // Department employee search
   const deptSearch =
@@ -635,19 +765,23 @@ window.addEventListener("load", () => {
       loadDeptEmployees(q);
     });
   }
-  // Assign modal search
-  const assignSearch =
-    document.getElementById("assignSearch");
+ // Assign modal search
+ const assignSearch =
+   document.getElementById("assignSearch");
 
-  assignSearch.addEventListener("input", e => {
-    const q = e.target.value.trim();
-    if (q.length < 2) {
-      document.getElementById('assignList').innerHTML =
-        '<i>Type at least 2 characters...</i>';
-      return;
-    }
-    loadAssignEmployees(q);
-  });
+ if (assignSearch) {
+   assignSearch.addEventListener("input", e => {
+     const q = e.target.value.trim();
+
+     if (q.length < 1) {
+       document.getElementById("assignList").innerHTML =
+         "<i>Type to search...</i>";
+       return;
+     }
+
+     loadAssignEmployees(q);
+   });
+ }
 });
 
 function showLoader() {
@@ -674,8 +808,23 @@ window.addEventListener("load", () => {
   }
 });
 
-// ================= GOOGLE-STYLE AUTO SEARCH =================
+// ================= PROJECT ENTER KEY SEARCH =================
+window.addEventListener("load", () => {
+  const projectSearch =
+    document.getElementById("projectSearch");
 
+  if (projectSearch) {
+    projectSearch.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault(); // stop form submit
+        searchProjects();   // trigger search
+      }
+    });
+  }
+});
+
+
+// ================= GOOGLE-STYLE AUTO SEARCH =================
 let empSearchTimer = null;
 window.addEventListener("load", () => {
   const empSearch =
@@ -710,3 +859,83 @@ window.addEventListener("load", () => {
     }, 2500);
   });
 });
+
+function openProjectAssignFromForm(){
+  if(!projectId.value){
+    alert("Save project first");
+    return;
+  }
+  openProjectAssign(
+    projectId.value,
+    projectName.value || "Project"
+  );
+}
+
+function renderProjectPagination(totalPages) {
+  const div =
+    document.getElementById("projectPagination");
+
+  div.innerHTML = '';
+
+  for (let i = 0; i < totalPages; i++) {
+
+    const btn = document.createElement("button");
+
+    btn.textContent = i + 1;
+
+    if (i === projectPage) {
+      btn.classList.add("active-page");
+    }
+
+    btn.onclick = () => loadProjects(i);
+
+    div.appendChild(btn);
+  }
+}
+
+function searchProjects() {
+  loadProjects(0);
+}
+
+function resetProjectSearch() {
+  document.getElementById("projectSearch").value = '';
+  loadProjects(0);
+}
+
+async function loadAssignEmployeesByIds(ids){
+  if (!ids || ids.length === 0) return;
+
+  const div = document.getElementById("assignList");
+  div.innerHTML = '<i>Loading assigned employees...</i>';
+
+  try {
+
+    // Fetch each employee
+    const requests = ids.map(id =>
+      apiCall(`${API.EMP}/${id}`)
+    );
+
+    const employees = await Promise.all(requests);
+
+    div.innerHTML = '';
+
+    employees.forEach(e => {
+      div.innerHTML += `
+        <div class="assign-item">
+          <label>
+            <input type="checkbox"
+                   value="${e.id}"
+                   checked
+                   onchange="toggleAssign(${e.id}, this.checked)">
+            <b>${e.name}</b>
+            <span>(${e.email})</span>
+          </label>
+        </div>
+      `;
+    });
+
+  } catch (err) {
+    console.error(err);
+    div.innerHTML = "<i>Failed to load assigned employees</i>";
+  }
+}

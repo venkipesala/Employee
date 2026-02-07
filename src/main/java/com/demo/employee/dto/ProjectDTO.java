@@ -1,13 +1,18 @@
 package com.demo.employee.dto;
 
+import com.demo.employee.entity.ProjectStatus;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
 import java.util.List;
 
 public class ProjectDTO {
 
-
+    @NotBlank
     private String name;
-    private String status;
+    @NotNull
+    private ProjectStatus status;
     private LocalDate startDate;
     private LocalDate endDate;
 
@@ -21,11 +26,11 @@ public class ProjectDTO {
         this.name = name;
     }
 
-    public String getStatus() {
+    public ProjectStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(ProjectStatus status) {
         this.status = status;
     }
 

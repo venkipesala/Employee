@@ -34,7 +34,7 @@ public class EmployeeService {
         if (search == null || search.isEmpty()) {
             return repository.findAll(pageable);
         }
-        return repository.search(search.toLowerCase(), pageable);
+        return repository.searchEmployees(search.toLowerCase(), pageable);
     }
 
     // READ BY ID

@@ -62,7 +62,7 @@ public class DepartmentService {
             String search) {
 
         Pageable pageable =
-                PageRequest.of(page, size, Sort.by("id").descending());
+                PageRequest.of(page, size, Sort.by("id").ascending());
 
         if (search == null || search.isBlank()) {
             return deptRepo.findAll(pageable);
